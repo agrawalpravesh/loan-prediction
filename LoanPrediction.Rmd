@@ -1,0 +1,148 @@
+---
+title: "Loan Prediction"
+author: "Pravesh Agrawal"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading the required package
+```{r}
+pacman::p_load(caret)
+```
+
+## Reading the Train Data Set
+```{r}
+train <- read.csv("train_ctrUa4K.csv")
+```
+
+## Finding the unique values
+```{r}
+sapply(train,function(x)length(unique(x)))
+sapply(train[,c(2,3,4,5,6,10,11,12,13)], function(x)unique(x))
+```
+
+## Replacing the blank fields with NA
+```{r}
+sapply(train,function(x)sum(is.na(x)))
+
+
+train$Gender <- factor(train$Gender,levels = c("Male","Female"), labels = c("Male","Female"))
+
+train$Married <- factor(train$Married,levels = c("No","Yes"), labels = c("No","Yes"))
+
+train$Dependents <- factor(train$Dependents,levels = c(0,1,2,"3+"),labels = c(0,1,2,"3+"))
+
+train$Self_Employed <- factor(train$Self_Employed, levels = c("No","Yes"),labels = c("No","Yes"))
+
+
+sapply(train,function(x)sum(is.na(x)))
+```
+
+## Filling in the Missing Values
+```{r}
+train$Gender <- replace(train$Gender,which(is.na(train$Gender)),"Female")
+
+train$Married <- replace(train$Married,which(is.na(train$Married)),"Yes")
+
+train$Dependents <- replace(train$Dependents,which(is.na(train$Dependents)),1)
+
+train$Self_Employed <- replace(train$Self_Employed,which(is.na(train$Self_Employed)),"No")
+
+train$LoanAmount <- replace(train$LoanAmount,which(is.na(train$LoanAmount)),
+                            ceiling(mean(c(median(train$LoanAmount,na.rm = TRUE),
+                                           mean(train$LoanAmount,na.rm = TRUE)))))
+
+train$Loan_Amount_Term <- replace(train$Loan_Amount_Term,which(is.na(train$Loan_Amount_Term)),360)
+
+train$Credit_History <- replace(train$Credit_History,which(is.na(train$Credit_History)),1)
+
+
+sapply(train,function(x)sum(is.na(x)))
+```
+
+## Creating the Logistic Regression Model
+```{r}
+training <- train[,-1]
+logit <- glm(training$Loan_Status~.,data = training, family = "binomial")
+
+options(scipen=999)      #Prevent Scientific Notation of Numbers
+summary(logit)
+```
+
+## Generating prediction on training data using the model and checking accuracy of the model
+```{r}
+pred1 <- predict(logit, training[,-12], type = "response")
+confusionMatrix(data=as.factor(ifelse(pred1>0.5,"Y","N")),reference = training$Loan_Status,
+                positive = "Y")
+```
+
+## Reading the Test Data
+```{r}
+test <- read.csv("test_lAUu6dG.csv")
+```
+
+## Finding the Unique Values
+```{r}
+sapply(test,function(x)length(unique(x)))
+sapply(test[,c(2,3,4,5,6,10,11,12)], function(x)unique(x))
+```
+
+## Replacing the Blank Fields with NA
+```{r}
+sapply(test,function(x)sum(is.na(x)))
+
+
+test$Gender <- factor(test$Gender,levels = c("Male","Female"), labels = c("Male","Female"))
+
+test$Dependents <- factor(test$Dependents,levels = c(0,1,2,"3+"),labels = c(0,1,2,"3+"))
+
+test$Self_Employed <- factor(test$Self_Employed, levels = c("No","Yes"),labels = c("No","Yes"))
+
+
+sapply(test,function(x)sum(is.na(x)))
+```
+
+## Filling in the Missing Values 
+```{r}
+test$Gender <- replace(test$Gender,which(is.na(test$Gender)),"Female")
+
+test$Dependents <- replace(test$Dependents,which(is.na(test$Dependents)),1)
+
+test$Self_Employed <- replace(test$Self_Employed,which(is.na(test$Self_Employed)),"No")
+
+test$LoanAmount <- replace(test$LoanAmount,which(is.na(test$LoanAmount)),
+                            ceiling(mean(c(median(test$LoanAmount,na.rm = TRUE),
+                                           mean(test$LoanAmount,na.rm = TRUE)))))
+
+test$Loan_Amount_Term <- replace(test$Loan_Amount_Term,which(is.na(test$Loan_Amount_Term)),360)
+
+test$Credit_History <- replace(test$Credit_History,which(is.na(test$Credit_History)),1)
+```
+
+## Generating Predictions on the Test Data Set
+```{r}
+pred <- predict(logit, test, type = "response")
+test$Loan_Status <- ifelse(pred>0.5,"Y","N")
+```
+
+## Showing the Result
+```{r}
+result <- test[,c(1,13)]
+result
+```
+
+## Number of Loans Accepted and Rejected
+```{r}
+data.frame(Accepted=length(which(result$Loan_Status=="Y")),
+           Rejected=length(which(result$Loan_Status=="N")))
+```
+
+## Exporting the result to csv
+```{r}
+write.csv(result,"Loan_Prediction_Result.csv",row.names = FALSE)
+```
+
