@@ -139,6 +139,11 @@ result
 ```{r}
 data.frame(Accepted=length(which(result$Loan_Status=="Y")),
            Rejected=length(which(result$Loan_Status=="N")))
+
+
+
+
+
 ```
 
 ## Exporting the result to csv
